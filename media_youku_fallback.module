@@ -1,0 +1,88 @@
+<?php
+
+/**
+ * @file
+ * Provides fallback for YouTube videos in China.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function media_youku_fallback_menu() {
+  $items = array();
+
+  $items['ip/country'] = array(
+    'title' => 'IP2Country lookup',
+    'page callback' => 'media_youku_fallback_ip2country_lookup',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+    'file' => 'media_youku_fallback.pages.inc',
+  );
+
+  $items['ip/country/%'] = array(
+    'title' => 'IP2Country lookup',
+    'page callback' => 'media_youku_fallback_ip2country_lookup',
+    'page arguments' => array(2),
+    'delivery callback' => 'drupal_json_output',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+    'file' => 'media_youku_fallback.pages.inc',
+  );
+
+  $items['ip/china'] = array(
+    'title' => 'IP2Country lookup',
+    'page callback' => 'media_youku_fallback_china',
+    'delivery callback' => 'drupal_json_output',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+    'file' => 'media_youku_fallback.pages.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_file_view_alter().
+ */
+function media_youku_fallback_file_view_alter($build, $type) {
+
+  if (!empty($build['#file']->field_youku_fallback_url[LANGUAGE_NONE][0]['url'])) {
+    $url = $build['#file']->field_youku_fallback_url[LANGUAGE_NONE][0]['url'];
+    $youku_id = media_youku_fallback_parse_code($url);
+    $youtube_id = str_replace('youtube://v/', '', $build['file']['#uri']);
+
+    if ($youku_id && $youtube_id) {
+      drupal_add_js(array('youku' => array($youtube_id => $youku_id)), 'setting');
+    }
+  }
+
+  static $js_added;
+
+  if (!$js_added) {
+    $path = drupal_get_path('module', 'media_youku_fallback');
+
+    $settings = array(
+      'url_ip_china' => url('ip/china', array('absolute' => TRUE)),
+      'url_ip' => url($path . '/includes/ip.php', array('absolute' => TRUE)),
+    );
+    drupal_add_js(array('media_youku_fallback' => $settings), 'setting');
+    drupal_add_js($path . '/js/media_youku_fallback.js');
+  }
+}
+
+/**
+ * Extract the YouKu video id from a provided embed code.
+ */
+function media_youku_fallback_parse_code($embed_code) {
+  $patterns = array(
+    '@v\.youku\.com/v_show/id_([^"\&/]+)\.html@i',
+    '@player\.youku\.com/player\.php/sid/([^"\&/]+)@i',
+  );
+
+  foreach ($patterns as $pattern) {
+    preg_match($pattern, $embed_code, $matches);
+    if (isset($matches[1])) {
+      return $matches[1];
+    }
+  }
+}

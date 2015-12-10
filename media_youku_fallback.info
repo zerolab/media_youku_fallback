@@ -1,0 +1,10 @@
+name = Media: YouKu Fallback
+description = YouTube video fallback for Chinese visitors
+core = 7.x
+
+package = Media
+
+dependencies[] = file_entity
+dependencies[] = ip2country
+dependencies[] = link
+dependencies[] = media_youtube
